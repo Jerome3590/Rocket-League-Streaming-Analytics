@@ -1,0 +1,39 @@
+{
+  "name": "dashboard-metrics",
+  "version-string": "1.0.0",
+  "dependencies": [
+    {
+      "name": "aws-sdk-cpp",
+      "default-features": false,
+      "features": [
+        "s3-crt",
+        "dynamodb",
+        "sts",
+        "s3"
+      ]
+    },
+    {
+      "name": "zlib"
+    },
+    {
+      "name": "libpng"
+    },
+    {
+      "name": "protobuf"
+    },
+    {
+      "name": "tiff"
+    },
+	{
+      "name": "fmt"
+    },
+	{
+      "name": "imgui"
+    },
+      {
+      "name": "nlohmann-json"
+    }
+    
+  ],
+  "builtin-baseline": "c9fa965c2a1b1334469b4539063f3ce95383653c"
+}

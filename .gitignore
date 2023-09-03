@@ -1,0 +1,13 @@
+vcpkg/*
+vcpkg_installed/vcpkg/*
+vcpkg_installed/x64-windows/*
+vcpkg_installed/x64-windows-static/*
+BakkesModSDK/*
+build/*
+
+!vcpkg/.gitkeep
+!vcpkg_installed/vcpkg/.gitkeep
+!vcpkg_installed/x64-windows/.gitkeep
+!vcpkg_installed/x64-windows-static/.gitkeep
+!BakkesModSDK/.gitkeep
+!build/.gitkeep
