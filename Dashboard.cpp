@@ -128,7 +128,7 @@ void Dashboard::getGameData() {
         // Retrieve Match GUID, elapsed time, and scores
         ServerWrapper server = gameWrapper->GetGameEventAsServer();
         
-        // Check if server is null and exit function if true
+        // Check if server is null and exit function if true. Retry after 0.5 seconds
         if (server.IsNull()) {
             return;
         }
