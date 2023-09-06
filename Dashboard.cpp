@@ -197,7 +197,10 @@ void Dashboard::getGameData() {
 
 void Dashboard::onUnload() {
     elapsedIntervals = 0;
+    gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartEvent");
+    gameWrapper->UnhookEvent("Function ProjectX.GRI_X.EventGameStarted");
+    gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartCountDown");
+    gameWrapper->UnhookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame");
+    gameWrapper->UnhookEvent("unction GameEvent_Soccar_TA.Active.EndState");
 	this->log("Dashboard plugin unloaded..");
 }
-
-
