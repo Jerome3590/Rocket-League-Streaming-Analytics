@@ -85,8 +85,7 @@ void Dashboard::dynamoDbOps() {
 
 void Dashboard::uploadToDynamoDB(
 const std::string& gameID, const std::string& elapsedTime, 
-const std::string& team0Name, const std::string& team1Name, 
-const int team0Score, const int team1Score, 
+const std::string& team0Score, const std::string& team1Score, 
 const std::string& team0PlayerName1, const std::string& team0PlayerName2, 
 const std::string& team1PlayerName1, const std::string& team1PlayerName2,
 const std::string& team0Player1FlipReset, const std::string& team0Player2FlipReset, 
@@ -102,10 +101,8 @@ const std::string& team1Player1FlipReset, const std::string& team1Player2FlipRes
     Aws::Map<Aws::String, AttributeValue> item;
     item["Game_ID"] = AttributeValue(gameID);
     item["Elapsed_Time"] = AttributeValue(elapsedTime);
-    item["Team0_Name"] = AttributeValue(team0Name);
-    item["Team1_Name"] = AttributeValue(team1Name);
-    item["Team0_Score"] = AttributeValue(std::to_string(team0Score));
-    item["Team1_Score"] = AttributeValue(std::to_string(team1Score));
+    item["Team0_Score"] = AttributeValue(team0Score);
+    item["Team1_Score"] = AttributeValue(team1Score);
     item["team0_PlayerName1"] = AttributeValue(team0PlayerName1);
     item["team0_PlayerName2"] = AttributeValue(team0PlayerName2);
     item["team1_PlayerName1"] = AttributeValue(team1PlayerName1);
@@ -139,22 +136,20 @@ void Dashboard::getGameData() {
     std::vector<std::string> players;
     std::vector<std::string> flipResets;
     std::vector<int> teams;
-    int playerTeam;
-    int playerTeam0, playerTeam1;
+    int playerTeam0, playerTeam1, playerTeam;
     int playerCount = 0;
     std::string playerName;
     int goals, assists, saves, shots;
     std::string flipReset;
     
     //enumerate vector array
-    std::string team0Name, team1Name;
-    int team0Score, team1Score;
+    int team0PlayerCount = 0;  
+    int team1PlayerCount = 0;
+    std::string team0Score, team1Score;
     std::string team0PlayerName1, team0PlayerName2;
     std::string team1PlayerName1, team1PlayerName2;
-    std::string team0Player1FlipReset;
-    std::string team0Player2Flip_Reset;
-    std::string team1Player1FlipReset;
-    std::string team1Player2FlipReset;
+    std::string team0Player1FlipReset, team0Player2FlipReset;
+    std::string team1Player1FlipReset, team1Player2FlipReset;
 
     // Check if in online game
     bool isInOnlineGame = gameWrapper->IsInOnlineGame() || gameWrapper->IsSpectatingInOnlineGame();
@@ -177,20 +172,16 @@ void Dashboard::getGameData() {
         std::string gameID = server.GetMatchGUID();
         auto elapsedTime = server.GetTotalGameTimePlayed();
         std::string elapsedTimeString = std::to_string(elapsedTime); // Convert to string
-        
-        std::string Team0_Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetScore());
-        std::string Team1_Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetScore());
-        std::string Team0_Name = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetTeamName());
-        std::string Team1_Name = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetTeamName());
-
+        std::string team0Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetScore());
+        std::string team1Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetScore());
 
         // Retrieve Player IDs, names, and goals
         ArrayWrapper<PriWrapper> pris = server.GetPRIs();
         for (int i = 0; i < pris.Count(); i++) {
             PriWrapper player = pris.Get(i);
-            int playerTeam = player.GetTeam();
-            std::string playerName = player.GetPlayerName().ToString();
-            std::string flipReset = std::to_string(player.GetCar().GetFlipComponent().CanActivate());
+            auto playerTeam = pris.Get(i).GetTeamNum();
+            auto playerName = player.GetPlayerName().ToString();
+            auto flipReset = std::to_string(player.GetCar().GetFlipComponent().CanActivate());
 
             if (playerTeam == 0 && team0PlayerCount < 2) {
                 if (team0PlayerCount == 0) {
@@ -201,7 +192,7 @@ void Dashboard::getGameData() {
                     team0Player2FlipReset = flipReset;
                 }
                 team0PlayerCount++;
-            } else if (playerTeam == 1 && team1PlayerCount < 2) {
+                } else if (playerTeam == 1 && team1PlayerCount < 2) {
                 if (team1PlayerCount == 0) {
                     team1PlayerName1 = playerName;
                     team1Player1FlipReset = flipReset;
@@ -210,23 +201,22 @@ void Dashboard::getGameData() {
                     team1Player2FlipReset = flipReset;
                 }
                 team1PlayerCount++;
-        }
-    }
+            }
+
         }
 
         // Print output to console
         this->log("Game ID: " + gameID + "\n");
         this->log("Elapsed Time: " + elapsedTimeString + "\n");
-        this->log("Score: " + team0Name + ":" + team0Score + " " + team1Name + ":" + team1Score + "\n");
-        this->log("Team: " + team0Name + "|" + "PlayerName1:" + playerName1 + "|" + "FlipReset:" + team0Player1FlipReset );
-        this->log("Team: " + team0Name + "|" + "PlayerName2:" + playerName2 + "|" + "FlipReset:" + team0Player2FlipReset );
-        this->log("Team: " + team1Name + "|" + "PlayerName1:" + playerName1 + "|" + "FlipReset:" + team1Player1FlipReset );
-        this->log("Team: " + team1Name + "|" + "PlayerName2:" + playerName2 + "|" + "FlipReset:" + team1Player2FlipReset );
-
+        this->log("Team 1 Score: " + team0Score + " | Team 2 Score: " + team1Score + "\n");
+        this->log("Team1|Player1: " + team0PlayerName1 + " | FlipReset:" + team0Player1FlipReset + "\n" );
+        this->log("Team1|Player2: " + team0PlayerName2 + " | FlipReset:" + team0Player2FlipReset + "\n" ); 
+        this->log("Team2|Player1: " + team1PlayerName1 + " | FlipReset:" + team1Player1FlipReset + "\n" );
+        this->log("Team2|Player2: " + team1PlayerName2 + " | FlipReset:" + team1Player2FlipReset + "\n" );
         
         // Upload JSON to DynamoDB (implement function to handle upload)
         uploadToDynamoDB(gameID, elapsedTimeString, 
-                        team0Name, team0Score, team1Name, team1Score, 
+                        team0Score, team1Score, 
                         team0PlayerName1, team0PlayerName2, 
                         team1PlayerName1, team1PlayerName2,
                         team0Player1FlipReset, team0Player2FlipReset, 
@@ -241,13 +231,13 @@ void Dashboard::getGameData() {
                 getGameData();
             }, 0.5f);
         }
+        
     } // End of if(isInOnlineGame)
 } // End of function
 
 
 
 void Dashboard::onUnload() {
-    elapsedIntervals = 0;
     gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartEvent");
     gameWrapper->UnhookEvent("Function ProjectX.GRI_X.EventGameStarted");
     gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartCountDown");

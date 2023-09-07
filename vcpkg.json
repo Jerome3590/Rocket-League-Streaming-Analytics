@@ -29,9 +29,6 @@
     },
 	{
       "name": "imgui"
-    },
-      {
-      "name": "nlohmann-json"
     }
     
   ],

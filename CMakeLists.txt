@@ -39,9 +39,6 @@ find_package(protobuf REQUIRED)
 find_package(imgui REQUIRED)
 find_package(fmt REQUIRED)
 
-#### NLOHMANN JSON VCPKG Library (vcpkg.json) ####
-find_package(nlohmann_json CONFIG REQUIRED)
-
 
 # The main plugin file
 set(SOURCE_FILES Dashboard.cpp)
@@ -55,7 +52,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                           ${BAKKESMOD_SDK_PATH}/include
                           ${AWSSDK_INCLUDE_DIRS} 
                           ${TIFF_INCLUDE_DIRS}
-                          ${nlohmann_json_INCLUDE_DIRS}
                           )
 
 # Link static libraries to DLL
@@ -68,7 +64,6 @@ target_link_libraries(${PROJECT_NAME}
                       protobuf::libprotobuf-lite
                       imgui::imgui
                       fmt::fmt-header-only
-                      nlohmann_json::nlohmann_json
 )
 
 # Bundle system runtime libraries into DLL

@@ -27,7 +27,12 @@ private:
     std::shared_ptr<Aws::DynamoDB::DynamoDBClient> dynamoClient;
     void log(std::string msg);
     void dynamoDbOps();
-    void uploadToDynamoDB(const std::string& gameID, const std::string& elapsedTime, nlohmann::json& gameJSON);
+    void uploadToDynamoDB(const std::string& gameID, const std::string& elapsedTime, 
+        const std::string& team0Score, const std::string& team1Score,
+        const std::string& team0PlayerName1, const std::string& team0PlayerName2, 
+        const std::string& team1PlayerName1, const std::string& team1PlayerName2, 
+        const std::string& team0Player1FlipReset, const std::string& team0Player2FlipReset,
+        const std::string& team1Player1FlipReset, const std::string& team1Player2FlipReset);
     void loadHooks();
     void getGameData();
     float elapsedIntervals = 0.0f;
