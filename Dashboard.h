@@ -4,8 +4,7 @@
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 #include <aws/core/Aws.h>
 #include <aws/core/auth/AWSCredentialsProvider.h> 
-#include <memory> // For std::shared_ptr
-#include <nlohmann/json.hpp> // If used in the method declarations
+#include <memory> // For std::shared_ptr// If used in the method declarations
 #include <string>
 
 // Forward declarations

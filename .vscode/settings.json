@@ -100,6 +100,16 @@
     "codecvt": "cpp",
     "complex": "cpp",
     "csignal": "cpp",
-    "valarray": "cpp"
+    "valarray": "cpp",
+    "cwctype": "cpp",
+    "*.tcc": "cpp",
+    "bitset": "cpp",
+    "cfenv": "cpp",
+    "memory_resource": "cpp",
+    "string_view": "cpp",
+    "numbers": "cpp",
+    "semaphore": "cpp",
+    "shared_mutex": "cpp",
+    "cinttypes": "cpp"
   }
 }

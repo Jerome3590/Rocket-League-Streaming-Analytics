@@ -83,53 +83,91 @@ void Dashboard::dynamoDbOps() {
     
 }
 
-// Function to upload JSON to DynamoDB (implement specific logic)
-void Dashboard::uploadToDynamoDB(const std::string& gameID, const std::string& elapsedTime, nlohmann::json& gameJSON) {
-    {
+void Dashboard::uploadToDynamoDB(
+const std::string& gameID, const std::string& elapsedTime, 
+const std::string& team0Name, const std::string& team1Name, 
+const int team0Score, const int team1Score, 
+const std::string& team0PlayerName1, const std::string& team0PlayerName2, 
+const std::string& team1PlayerName1, const std::string& team1PlayerName2,
+const std::string& team0Player1FlipReset, const std::string& team0Player2FlipReset, 
+const std::string& team1Player1FlipReset, const std::string& team1Player2FlipReset) {
+    using namespace Aws::DynamoDB::Model;
 
-      using namespace Aws::DynamoDB::Model;
+    PutItemRequest putItemRequest;
 
-      PutItemRequest putItemRequest;
+    // Set table name
+    putItemRequest.SetTableName("arn:aws:dynamodb:us-east-1:432178471498:table/rocket_league_continuous_events");
 
-       // Set table name
-       putItemRequest.SetTableName("arn:aws:dynamodb:us-east-1:432178471498:table/rocket_league_continuous_events");
+    // Create an item with string and number attributes
+    Aws::Map<Aws::String, AttributeValue> item;
+    item["Game_ID"] = AttributeValue(gameID);
+    item["Elapsed_Time"] = AttributeValue(elapsedTime);
+    item["Team0_Name"] = AttributeValue(team0Name);
+    item["Team1_Name"] = AttributeValue(team1Name);
+    item["Team0_Score"] = AttributeValue(std::to_string(team0Score));
+    item["Team1_Score"] = AttributeValue(std::to_string(team1Score));
+    item["team0_PlayerName1"] = AttributeValue(team0PlayerName1);
+    item["team0_PlayerName2"] = AttributeValue(team0PlayerName2);
+    item["team1_PlayerName1"] = AttributeValue(team1PlayerName1);
+    item["team1_PlayerName2"] = AttributeValue(team1PlayerName2);
+    item["team0_Player1_Flip_Reset"] = AttributeValue(team0Player1FlipReset);
+    item["team0_Player2_Flip_Reset"] = AttributeValue(team0Player2FlipReset);
+    item["team1_Player1_Flip_Reset"] = AttributeValue(team1Player1FlipReset);
+    item["team1_Player2_Flip_Reset"] = AttributeValue(team1Player2FlipReset);
 
-       // Convert JSON to DynamoDB AttributeValue format
-       Aws::Map<Aws::String, AttributeValue> item;
-       item["Game_ID"] = AttributeValue(gameID);
-       item["Elapsed_Time"] = AttributeValue(elapsedTime);
 
-       for (auto& [key, value] : gameJSON.items()) {
-           item[key] = AttributeValue(value.dump()); // Assuming all values are strings
-        }
+    // Set the item in the put request
+    putItemRequest.SetItem(item);
 
-        // Set the item
-        putItemRequest.SetItem(item);
+    // Send the PutItem request
+    auto outcome = dynamoClient->PutItem(putItemRequest);
 
-        // Send the PutItem request
-        auto outcome = dynamoClient->PutItem(putItemRequest);
-
-        if (outcome.IsSuccess()) {
-            this->log("Item successfully put into table.");
-        } else {
-           this->log("Error putting item into table: " + outcome.GetError().GetMessage());
-        }
+    if (outcome.IsSuccess()) {
+        this->log("Item successfully put into table.");
+    } else {
+        this->log("Error putting item into table: " + outcome.GetError().GetMessage());
     }
 }
+
 
 
 void Dashboard::getGameData() {
     // Print output to console
     this->log("Get Game Data starting..\n");
 
+    // Initialize vectors and variables
+    std::vector<std::string> players;
+    std::vector<std::string> flipResets;
+    std::vector<int> teams;
+    int playerTeam;
+    int playerTeam0, playerTeam1;
+    int playerCount = 0;
+    std::string playerName;
+    int goals, assists, saves, shots;
+    std::string flipReset;
+    
+    //enumerate vector array
+    std::string team0Name, team1Name;
+    int team0Score, team1Score;
+    std::string team0PlayerName1, team0PlayerName2;
+    std::string team1PlayerName1, team1PlayerName2;
+    std::string team0Player1FlipReset;
+    std::string team0Player2Flip_Reset;
+    std::string team1Player1FlipReset;
+    std::string team1Player2FlipReset;
+
+    // Check if in online game
     bool isInOnlineGame = gameWrapper->IsInOnlineGame() || gameWrapper->IsSpectatingInOnlineGame();
 
     if (isInOnlineGame) {
         // Retrieve Match GUID, elapsed time, and scores
-        ServerWrapper server = gameWrapper->GetGameEventAsServer();
+        ServerWrapper server = gameWrapper->GetOnlineGame();
         
+        this->log("Checking game server..\n"); 
+         
         // Check if server is null and exit function if true. Retry after 0.5 seconds
         if (server.IsNull()) {
+            this->log("Game server is null..\n");
             return;
         }
 
@@ -140,46 +178,59 @@ void Dashboard::getGameData() {
         auto elapsedTime = server.GetTotalGameTimePlayed();
         std::string elapsedTimeString = std::to_string(elapsedTime); // Convert to string
         
-        std::string score1 = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetScore());
-        std::string score2 = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetScore());
+        std::string Team0_Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetScore());
+        std::string Team1_Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetScore());
+        std::string Team0_Name = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetTeamName());
+        std::string Team1_Name = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetTeamName());
 
-        // Print output to console
-        this->log("Game ID: " + gameID + "\n");
-        this->log("Elapsed Time: " + elapsedTimeString + "\n");
-        this->log("Score 1: " + score1 + "\n");
-        this->log("Score 2: " + score2 + "\n");
-
-        // Create JSON object every 0.5 seconds
-        nlohmann::json gameJSON;
-        gameJSON["Score Team 1"] = score1; 
-        gameJSON["Score Team 2"] = score2;
 
         // Retrieve Player IDs, names, and goals
         ArrayWrapper<PriWrapper> pris = server.GetPRIs();
         for (int i = 0; i < pris.Count(); i++) {
             PriWrapper player = pris.Get(i);
-            // Get player information
-            std::string player_ID = std::to_string(player.GetPlayerID());
-            std::string player_Name = player.GetPlayerName().ToString();
-            std::string player_Goals = std::to_string(player.GetMatchGoals());
-            // Retrieve the Flip Reset for player's car
-            auto flipReset = std::to_string(player.GetCar().GetFlipComponent().CanActivate());
-            // Log to console
-            this->log("Player ID: " + player_ID);
-            this->log("Player Name: " + player_Name);
-            this->log("Player Goals: " + player_Goals);
-            this->log("Flip Reset: " + flipReset);
-            // Add to gameJSON
-            nlohmann::json playerJSON;
-            playerJSON["Player ID"] = player_ID;
-            playerJSON["Player Name"] = player_Name;
-            playerJSON["Player Goals"] = player_Goals;
-            playerJSON["Flip Reset"] = flipReset;
-            gameJSON["Players"].push_back(playerJSON);
+            int playerTeam = player.GetTeam();
+            std::string playerName = player.GetPlayerName().ToString();
+            std::string flipReset = std::to_string(player.GetCar().GetFlipComponent().CanActivate());
+
+            if (playerTeam == 0 && team0PlayerCount < 2) {
+                if (team0PlayerCount == 0) {
+                    team0PlayerName1 = playerName;
+                    team0Player1FlipReset = flipReset;
+                } else {
+                    team0PlayerName2 = playerName;
+                    team0Player2FlipReset = flipReset;
+                }
+                team0PlayerCount++;
+            } else if (playerTeam == 1 && team1PlayerCount < 2) {
+                if (team1PlayerCount == 0) {
+                    team1PlayerName1 = playerName;
+                    team1Player1FlipReset = flipReset;
+                } else {
+                    team1PlayerName2 = playerName;
+                    team1Player2FlipReset = flipReset;
+                }
+                team1PlayerCount++;
         }
+    }
+        }
+
+        // Print output to console
+        this->log("Game ID: " + gameID + "\n");
+        this->log("Elapsed Time: " + elapsedTimeString + "\n");
+        this->log("Score: " + team0Name + ":" + team0Score + " " + team1Name + ":" + team1Score + "\n");
+        this->log("Team: " + team0Name + "|" + "PlayerName1:" + playerName1 + "|" + "FlipReset:" + team0Player1FlipReset );
+        this->log("Team: " + team0Name + "|" + "PlayerName2:" + playerName2 + "|" + "FlipReset:" + team0Player2FlipReset );
+        this->log("Team: " + team1Name + "|" + "PlayerName1:" + playerName1 + "|" + "FlipReset:" + team1Player1FlipReset );
+        this->log("Team: " + team1Name + "|" + "PlayerName2:" + playerName2 + "|" + "FlipReset:" + team1Player2FlipReset );
+
         
         // Upload JSON to DynamoDB (implement function to handle upload)
-        uploadToDynamoDB(gameID, elapsedTimeString, gameJSON);
+        uploadToDynamoDB(gameID, elapsedTimeString, 
+                        team0Name, team0Score, team1Name, team1Score, 
+                        team0PlayerName1, team0PlayerName2, 
+                        team1PlayerName1, team1PlayerName2,
+                        team0Player1FlipReset, team0Player2FlipReset, 
+                        team1Player1FlipReset, team1Player2FlipReset);
 
         // Increment the elapsed intervals
         elapsedIntervals++;
@@ -201,6 +252,6 @@ void Dashboard::onUnload() {
     gameWrapper->UnhookEvent("Function ProjectX.GRI_X.EventGameStarted");
     gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartCountDown");
     gameWrapper->UnhookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame");
-    gameWrapper->UnhookEvent("unction GameEvent_Soccar_TA.Active.EndState");
+    gameWrapper->UnhookEvent("Function GameEvent_Soccar_TA.Active.EndState");
 	this->log("Dashboard plugin unloaded..");
 }
