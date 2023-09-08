@@ -4,6 +4,7 @@
 #include <bakkesmod/wrappers/GameEvent/ServerWrapper.h>
 #include <bakkesmod/wrappers/GameEvent/GameEventWrapper.h>
 #include <bakkesmod/wrappers/GameObject/TeamWrapper.h>
+#include <bakkesmod/wrappers/GameObject/TeamInfoWrapper.h>
 #include <bakkesmod/wrappers/GameObject/PriWrapper.h>
 #include <bakkesmod/wrappers/GameEvent/TeamGameEventWrapper.h>
 #include <bakkesmod/wrappers/Engine/ActorWrapper.h>
@@ -20,6 +21,40 @@
 #include <chrono>
 
 BAKKESMOD_PLUGIN(Dashboard, "Rocket League Game Dashboard", "1.0", PLUGINTYPE_FREEPLAY)
+
+
+using namespace std;
+
+//Game Variables
+string team0Name = "";
+string team1Name = "";
+string playerName = "";
+unsigned char playerTeam = 0;
+bool isInOnlineGame = false;
+vector<string> player;
+vector<float> teams;
+string elapsedTimeString = "";
+string gameID = "";
+float elapsedTime = 0.0f;
+string team0Score = 0;
+string team1Score = 0; 
+float playerTeam0 = 0;
+float playerTeam1 = 0;
+
+    
+//Enumerate through all the players in the game
+int team0PlayerCount = 0;  
+int team1PlayerCount = 0;
+string team0PlayerName1 = "";
+string team0PlayerName2 = "";
+string team1PlayerName1 = "";
+string team1PlayerName2 = "";
+string flipReset = "";
+string team0Player1FlipReset = "";
+string team0Player2FlipReset = "";
+string team1Player1FlipReset = "";
+string team1Player2FlipReset = "";
+
 
 void Dashboard::log(std::string msg) {
 	cvarManager->log(msg);
@@ -84,7 +119,8 @@ void Dashboard::dynamoDbOps() {
 }
 
 void Dashboard::uploadToDynamoDB(
-const std::string& gameID, const std::string& elapsedTime, 
+const std::string& gameID, const std::string& elapsedTimeString, 
+const std::string& team0Name, const std::string& team1Name, 
 const std::string& team0Score, const std::string& team1Score, 
 const std::string& team0PlayerName1, const std::string& team0PlayerName2, 
 const std::string& team1PlayerName1, const std::string& team1PlayerName2,
@@ -100,7 +136,9 @@ const std::string& team1Player1FlipReset, const std::string& team1Player2FlipRes
     // Create an item with string and number attributes
     Aws::Map<Aws::String, AttributeValue> item;
     item["Game_ID"] = AttributeValue(gameID);
-    item["Elapsed_Time"] = AttributeValue(elapsedTime);
+    item["Elapsed_Time"] = AttributeValue(elapsedTimeString);
+    item["Team0_Name"] = AttributeValue(team0Name);
+    item["Team1_Name"] = AttributeValue(team1Name);
     item["Team0_Score"] = AttributeValue(team0Score);
     item["Team1_Score"] = AttributeValue(team1Score);
     item["team0_PlayerName1"] = AttributeValue(team0PlayerName1);
@@ -132,25 +170,6 @@ void Dashboard::getGameData() {
     // Print output to console
     this->log("Get Game Data starting..\n");
 
-    // Initialize vectors and variables
-    std::vector<std::string> players;
-    std::vector<std::string> flipResets;
-    std::vector<int> teams;
-    int playerTeam0, playerTeam1, playerTeam;
-    int playerCount = 0;
-    std::string playerName;
-    int goals, assists, saves, shots;
-    std::string flipReset;
-    
-    //enumerate vector array
-    int team0PlayerCount = 0;  
-    int team1PlayerCount = 0;
-    std::string team0Score, team1Score;
-    std::string team0PlayerName1, team0PlayerName2;
-    std::string team1PlayerName1, team1PlayerName2;
-    std::string team0Player1FlipReset, team0Player2FlipReset;
-    std::string team1Player1FlipReset, team1Player2FlipReset;
-
     // Check if in online game
     bool isInOnlineGame = gameWrapper->IsInOnlineGame() || gameWrapper->IsSpectatingInOnlineGame();
 
@@ -169,19 +188,22 @@ void Dashboard::getGameData() {
         // Log that a game server was found
         this->log("Game server found..\n");
 
-        std::string gameID = server.GetMatchGUID();
-        auto elapsedTime = server.GetTotalGameTimePlayed();
-        std::string elapsedTimeString = std::to_string(elapsedTime); // Convert to string
-        std::string team0Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetScore());
-        std::string team1Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetScore());
+        gameID = server.GetMatchGUID();
+        elapsedTime = server.GetTotalGameTimePlayed();
+        elapsedTimeString = std::to_string(elapsedTime); // Convert Time to string
+        team0Name = gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetTeamName().ToString();
+        team1Name = gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetTeamName().ToString();
+        team0Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetScore());
+        team1Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetScore());
+        
 
         // Retrieve Player IDs, names, and goals
         ArrayWrapper<PriWrapper> pris = server.GetPRIs();
         for (int i = 0; i < pris.Count(); i++) {
             PriWrapper player = pris.Get(i);
-            auto playerTeam = pris.Get(i).GetTeamNum();
-            auto playerName = player.GetPlayerName().ToString();
-            auto flipReset = std::to_string(player.GetCar().GetFlipComponent().CanActivate());
+            playerTeam = pris.Get(i).GetTeamNum();
+            playerName = player.GetPlayerName().ToString();
+            flipReset = std::to_string(player.GetCar().GetFlipComponent().CanActivate());
 
             if (playerTeam == 0 && team0PlayerCount < 2) {
                 if (team0PlayerCount == 0) {
@@ -208,7 +230,7 @@ void Dashboard::getGameData() {
         // Print output to console
         this->log("Game ID: " + gameID + "\n");
         this->log("Elapsed Time: " + elapsedTimeString + "\n");
-        this->log("Team 1 Score: " + team0Score + " | Team 2 Score: " + team1Score + "\n");
+        this->log("Team: " + team0Name + " Score: " + team0Score + " | Team: " + team1Name + " Score: "  + team1Score + "\n");
         this->log("Team1|Player1: " + team0PlayerName1 + " | FlipReset:" + team0Player1FlipReset + "\n" );
         this->log("Team1|Player2: " + team0PlayerName2 + " | FlipReset:" + team0Player2FlipReset + "\n" ); 
         this->log("Team2|Player1: " + team1PlayerName1 + " | FlipReset:" + team1Player1FlipReset + "\n" );
@@ -216,6 +238,7 @@ void Dashboard::getGameData() {
         
         // Upload JSON to DynamoDB (implement function to handle upload)
         uploadToDynamoDB(gameID, elapsedTimeString, 
+                        team0Name, team1Name,
                         team0Score, team1Score, 
                         team0PlayerName1, team0PlayerName2, 
                         team1PlayerName1, team1PlayerName2,
