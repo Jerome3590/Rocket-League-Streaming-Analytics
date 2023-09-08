@@ -27,7 +27,7 @@ private:
     std::shared_ptr<Aws::DynamoDB::DynamoDBClient> dynamoClient;
     void log(std::string msg);
     void dynamoDbOps();
-    void uploadToDynamoDB(const std::string& gameID, const std::string& elapsedTime, 
+    void uploadToDynamoDB(const std::string& gameID, const std::string& elapsedTimeString, 
         const std::string& team0Score, const std::string& team1Score,
         const std::string& team0PlayerName1, const std::string& team0PlayerName2, 
         const std::string& team1PlayerName1, const std::string& team1PlayerName2, 
