@@ -20,67 +20,63 @@
 #include <thread>
 #include <chrono>
 
+#define UPDATE_PRIDATA_EVENT_NAME "Function TAGame.GFxHUD_TA.UpdatePRIData"
+
 BAKKESMOD_PLUGIN(Dashboard, "Rocket League Game Dashboard", "1.0", PLUGINTYPE_FREEPLAY)
 
 
-using namespace std;
-
-//Game Variables
-string team0Name = "";
-string team1Name = "";
-string playerName = "";
-unsigned char playerTeam = 0;
-bool isInOnlineGame = false;
-vector<string> player;
-vector<float> teams;
-string elapsedTimeString = "";
-string gameID = "";
-float elapsedTime = 0.0f;
-string team0Score = 0;
-string team1Score = 0; 
-float playerTeam0 = 0;
-float playerTeam1 = 0;
-
-    
-//Enumerate through all the players in the game
-int team0PlayerCount = 0;  
-int team1PlayerCount = 0;
-string team0PlayerName1 = "";
-string team0PlayerName2 = "";
-string team1PlayerName1 = "";
-string team1PlayerName2 = "";
-string flipReset = "";
-string team0Player1FlipReset = "";
-string team0Player2FlipReset = "";
-string team1Player1FlipReset = "";
-string team1Player2FlipReset = "";
-
 
 void Dashboard::log(std::string msg) {
+    if (!cvarManager) return;
 	cvarManager->log(msg);
 }
 
 
 void Dashboard::loadHooks() {
-   
+
+  //  gameWrapper->HookEventPost(UPDATE_PRIDATA_EVENT_NAME, 
+  //       [this] (std::string eventName){ getGameData(); });
     gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartEvent",
-        std::bind(&Dashboard::getGameData, this));
-    gameWrapper->HookEvent("Function ProjectX.GRI_X.EventGameStarted",
-        std::bind(&Dashboard::getGameData, this));
-     gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartCountDown",
-        std::bind(&Dashboard::getGameData, this));
+          std::bind(&Dashboard::getGameData, this));
+     gameWrapper->HookEvent("Function ProjectX.GRI_X.EventGameStarted",
+         std::bind(&Dashboard::getGameData, this));
+    gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartCountDown",
+      std::bind(&Dashboard::getGameData, this));
     gameWrapper->HookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame",
-        std::bind(&Dashboard::getGameData, this));
+         std::bind(&Dashboard::getGameData, this));
     gameWrapper->HookEvent("Function GameEvent_Soccar_TA.Active.EndState",
-        std::bind(&Dashboard::onUnload, this));
+         std::bind(&Dashboard::isGamePaused, this));
+    gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartEvent",
+          std::bind(&Dashboard::isGamePlaying, this));
+     gameWrapper->HookEvent("Function ProjectX.GRI_X.EventGameStarted",
+         std::bind(&Dashboard::isGamePlaying, this));
+    gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartCountDown",
+      std::bind(&Dashboard::isGamePlaying, this));
+    gameWrapper->HookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame",
+         std::bind(&Dashboard::isGamePlaying, this));
 }
 
 
 void Dashboard::onLoad() {
 	this->log("Dashboard plugin started..");
+    elapsedIntervals = 0;
 	dynamoDbOps();
 	this->loadHooks();
 	
+}
+
+
+bool Dashboard::isGamePaused() {
+    this->log("Game play paused..");
+    gamePaused = true; // Change this to member variable
+    return gamePaused;
+}
+
+
+bool Dashboard::isGamePlaying() {
+    this->log("Game play resumed..");
+    gamePaused = false; // Change this to member variable
+    return !gamePaused;
 }
 
 
@@ -112,7 +108,7 @@ void Dashboard::dynamoDbOps() {
 	  
 	  dynamoClient = std::make_shared<Aws::DynamoDB::DynamoDBClient>();
 
-      ShutdownAPI(options); // 
+      //ShutdownAPI(options); 
 	  
 	}
     
@@ -131,7 +127,7 @@ const std::string& team1Player1FlipReset, const std::string& team1Player2FlipRes
     PutItemRequest putItemRequest;
 
     // Set table name
-    putItemRequest.SetTableName("arn:aws:dynamodb:us-east-1:432178471498:table/rocket_league_continuous_events");
+    putItemRequest.SetTableName("rocket_league_continuous_events");
 
     // Create an item with string and number attributes
     Aws::Map<Aws::String, AttributeValue> item;
@@ -167,13 +163,20 @@ const std::string& team1Player1FlipReset, const std::string& team1Player2FlipRes
 
 
 void Dashboard::getGameData() {
+
+    // Print output to console
+    this->log("Reached Get Game Data..\n");
+    
     // Print output to console
     this->log("Get Game Data starting..\n");
 
+    if(!gameWrapper) {
+        return;
+    }
     // Check if in online game
     bool isInOnlineGame = gameWrapper->IsInOnlineGame() || gameWrapper->IsSpectatingInOnlineGame();
 
-    if (isInOnlineGame) {
+    if (isInOnlineGame && !gamePaused) {
         // Retrieve Match GUID, elapsed time, and scores
         ServerWrapper server = gameWrapper->GetOnlineGame();
         
@@ -188,22 +191,78 @@ void Dashboard::getGameData() {
         // Log that a game server was found
         this->log("Game server found..\n");
 
-        gameID = server.GetMatchGUID();
-        elapsedTime = server.GetTotalGameTimePlayed();
-        elapsedTimeString = std::to_string(elapsedTime); // Convert Time to string
-        team0Name = gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetTeamName().ToString();
-        team1Name = gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetTeamName().ToString();
-        team0Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(0).GetScore());
-        team1Score = std::to_string(gameWrapper->GetCurrentGameState().GetTeams().Get(1).GetScore());
+        std::string gameID = server.GetMatchGUID();
+        //float elapsedTime = server.GetTotalGameTimePlayed();
+        const int elapsedTime = server.GetbOverTime() ? -server.GetSecondsRemaining() : server.GetSecondsRemaining();
+        std::string elapsedTimeString = std::to_string(elapsedTime); // Convert Time to string
+
+        ServerWrapper gameState = gameWrapper->GetCurrentGameState();
+        if(gameState.IsNull()) {
+            return;
+        }
+        auto teams = gameState.GetTeams();
+        if(teams.IsNull() && teams.Count() < 2) { 
+            return;
+        }
+
+        TeamWrapper teams0 = teams.Get(0);
+        TeamWrapper teams1 = teams.Get(1);
+
+        // Log that a game server was found
+        this->log("Teams found..\n"); 
+
+        if(teams0.IsNull() || teams1.IsNull()) {
+            return;
+        }
+
+        std::string team0Name = teams0.GetTeamName().ToString();
+        std::string team1Name = teams1.GetTeamName().ToString();
+        std::string team0Score = std::to_string(teams0.GetScore());
+        std::string team1Score = std::to_string(teams1.GetScore());
         
 
         // Retrieve Player IDs, names, and goals
         ArrayWrapper<PriWrapper> pris = server.GetPRIs();
+
+        std::string team0PlayerName1 = "";
+        std::string team0PlayerName2 = "";
+        std::string team1PlayerName1 = "";
+        std::string team1PlayerName2 = "";
+        std::string team0Player1FlipReset = "";
+        std::string team0Player2FlipReset = "";
+        std::string team1Player1FlipReset = "";
+        std::string team1Player2FlipReset = "";
+        int team0PlayerCount = 0;
+        int team1PlayerCount = 0;
+
+
         for (int i = 0; i < pris.Count(); i++) {
             PriWrapper player = pris.Get(i);
-            playerTeam = pris.Get(i).GetTeamNum();
-            playerName = player.GetPlayerName().ToString();
-            flipReset = std::to_string(player.GetCar().GetFlipComponent().CanActivate());
+            if (player.IsNull()) {
+                continue;
+            }
+
+            TeamInfoWrapper teamInfo = player.GetTeam();
+            
+            if(teamInfo.IsNull()) { 
+                continue;
+            }
+
+            int playerTeam = teamInfo.GetTeamIndex();
+            std::string playerName = player.GetPlayerName().ToString();
+
+            CarWrapper playerCar = player.GetCar();
+               if (playerCar.IsNull())
+               continue;
+        
+            // Log that a game server was found
+            this->log("Cars found..\n");
+
+            FlipCarComponentWrapper flipComponent = playerCar.GetFlipComponent();
+               if (flipComponent.IsNull())
+               continue;
+
+            std::string flipReset = std::to_string(flipComponent.CanActivate());
 
             if (playerTeam == 0 && team0PlayerCount < 2) {
                 if (team0PlayerCount == 0) {

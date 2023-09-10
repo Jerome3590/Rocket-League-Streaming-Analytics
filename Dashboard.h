@@ -21,6 +21,10 @@ class Dashboard: public BakkesMod::Plugin::BakkesModPlugin
 public:
     virtual void onLoad();
     virtual void onUnload();
+    bool isGamePaused();
+    bool isGamePlaying();
+    bool gamePaused = false;
+    void getGameData();
     static void logAndCall(std::function<void()> func, const std::string& message); 
 private:
     Aws::SDKOptions options;
@@ -35,7 +39,6 @@ private:
         const std::string& team0Player1FlipReset, const std::string& team0Player2FlipReset,
         const std::string& team1Player1FlipReset, const std::string& team1Player2FlipReset);
     void loadHooks();
-    void getGameData();
     float elapsedIntervals = 0.0f;
 
 };
