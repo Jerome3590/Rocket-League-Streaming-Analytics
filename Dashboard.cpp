@@ -192,7 +192,6 @@ void Dashboard::getGameData() {
         this->log("Game server found..\n");
 
         std::string gameID = server.GetMatchGUID();
-        //float elapsedTime = server.GetTotalGameTimePlayed();
         const int elapsedTime = server.GetbOverTime() ? -server.GetSecondsRemaining() : server.GetSecondsRemaining();
         std::string elapsedTimeString = std::to_string(elapsedTime); // Convert Time to string
 
