@@ -34,8 +34,6 @@ void Dashboard::log(std::string msg) {
 
 void Dashboard::loadHooks() {
 
-  //  gameWrapper->HookEventPost(UPDATE_PRIDATA_EVENT_NAME, 
-  //       [this] (std::string eventName){ getGameData(); });
     gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartEvent",
           std::bind(&Dashboard::getGameData, this));
      gameWrapper->HookEvent("Function ProjectX.GRI_X.EventGameStarted",
@@ -68,14 +66,14 @@ void Dashboard::onLoad() {
 
 bool Dashboard::isGamePaused() {
     this->log("Game play paused..");
-    gamePaused = true; // Change this to member variable
+    gamePaused = true; 
     return gamePaused;
 }
 
 
 bool Dashboard::isGamePlaying() {
     this->log("Game play resumed..");
-    gamePaused = false; // Change this to member variable
+    gamePaused = false; 
     return !gamePaused;
 }
 
@@ -107,15 +105,13 @@ void Dashboard::dynamoDbOps() {
 	  }
 	  
 	  dynamoClient = std::make_shared<Aws::DynamoDB::DynamoDBClient>();
-
-      //ShutdownAPI(options); 
 	  
 	}
     
 }
 
 void Dashboard::uploadToDynamoDB(
-const std::string& gameID, const std::string& elapsedTimeString, 
+const std::string& gameID, const std::string& timeRemainingString, 
 const std::string& team0Name, const std::string& team1Name, 
 const std::string& team0Score, const std::string& team1Score, 
 const std::string& team0PlayerName1, const std::string& team0PlayerName2, 
@@ -127,12 +123,12 @@ const std::string& team1Player1FlipReset, const std::string& team1Player2FlipRes
     PutItemRequest putItemRequest;
 
     // Set table name
-    putItemRequest.SetTableName("rocket_league_continuous_events");
+    putItemRequest.SetTableName("rocket_league_events");
 
     // Create an item with string and number attributes
     Aws::Map<Aws::String, AttributeValue> item;
     item["Game_ID"] = AttributeValue(gameID);
-    item["Elapsed_Time"] = AttributeValue(elapsedTimeString);
+    item["Time_Remaining"] = AttributeValue(timeRemainingString); 
     item["Team0_Name"] = AttributeValue(team0Name);
     item["Team1_Name"] = AttributeValue(team1Name);
     item["Team0_Score"] = AttributeValue(team0Score);
@@ -177,7 +173,7 @@ void Dashboard::getGameData() {
     bool isInOnlineGame = gameWrapper->IsInOnlineGame() || gameWrapper->IsSpectatingInOnlineGame();
 
     if (isInOnlineGame && !gamePaused) {
-        // Retrieve Match GUID, elapsed time, and scores
+        // Retrieve Match GUID, game count down time, team names, and scores
         ServerWrapper server = gameWrapper->GetOnlineGame();
         
         this->log("Checking game server..\n"); 
@@ -192,8 +188,8 @@ void Dashboard::getGameData() {
         this->log("Game server found..\n");
 
         std::string gameID = server.GetMatchGUID();
-        const int elapsedTime = server.GetbOverTime() ? -server.GetSecondsRemaining() : server.GetSecondsRemaining();
-        std::string elapsedTimeString = std::to_string(elapsedTime); // Convert Time to string
+        const int timeRemaining = server.GetbOverTime() ? -server.GetSecondsRemaining() : server.GetSecondsRemaining();
+        std::string timeRemainingString = std::to_string(timeRemaining); // Convert Time to string
 
         ServerWrapper gameState = gameWrapper->GetCurrentGameState();
         if(gameState.IsNull()) {
@@ -287,7 +283,7 @@ void Dashboard::getGameData() {
 
         // Print output to console
         this->log("Game ID: " + gameID + "\n");
-        this->log("Elapsed Time: " + elapsedTimeString + "\n");
+        this->log("Time Remaining: " + timeRemainingString + "\n"); 
         this->log("Team: " + team0Name + " Score: " + team0Score + " | Team: " + team1Name + " Score: "  + team1Score + "\n");
         this->log("Team1|Player1: " + team0PlayerName1 + " | FlipReset:" + team0Player1FlipReset + "\n" );
         this->log("Team1|Player2: " + team0PlayerName2 + " | FlipReset:" + team0Player2FlipReset + "\n" ); 
@@ -295,7 +291,7 @@ void Dashboard::getGameData() {
         this->log("Team2|Player2: " + team1PlayerName2 + " | FlipReset:" + team1Player2FlipReset + "\n" );
         
         // Upload JSON to DynamoDB (implement function to handle upload)
-        uploadToDynamoDB(gameID, elapsedTimeString, 
+        uploadToDynamoDB(gameID, timeRemainingString, 
                         team0Name, team1Name,
                         team0Score, team1Score, 
                         team0PlayerName1, team0PlayerName2, 
