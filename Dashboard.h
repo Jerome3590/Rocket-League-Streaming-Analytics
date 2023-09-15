@@ -19,18 +19,22 @@ namespace Aws {
 class Dashboard: public BakkesMod::Plugin::BakkesModPlugin
 {
 public:
+    Dashboard(); 
     virtual void onLoad();
     virtual void onUnload();
     bool isGamePaused();
     bool isGamePlaying();
+    bool saveGameID(const std::string& gameID);
+    bool isNewGameFlag = false;
     bool gamePaused = false;
     void getGameData();
     static void logAndCall(std::function<void()> func, const std::string& message); 
+    ~Dashboard(); 
 private:
     Aws::SDKOptions options;
     std::shared_ptr<Aws::DynamoDB::DynamoDBClient> dynamoClient;
     void log(std::string msg);
-    void dynamoDbOps();
+    void AWSOps();
     void uploadToDynamoDB(const std::string& gameID, const std::string& timeRemainingString, 
         const std::string& team0Name, const std::string& team1Name,
         const std::string& team0Score, const std::string& team1Score,

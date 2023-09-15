@@ -15,15 +15,23 @@
 #include <aws/dynamodb/model/PutItemRequest.h>
 #include <aws/dynamodb/model/PutItemResult.h>
 #include <aws/dynamodb/model/AttributeValue.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/PutObjectRequest.h>
+#include <aws/s3/model/HeadObjectRequest.h>
+#include <sstream>
 #include <iostream>
 #include <functional>
 #include <thread>
 #include <chrono>
 
-#define UPDATE_PRIDATA_EVENT_NAME "Function TAGame.GFxHUD_TA.UpdatePRIData"
-
 BAKKESMOD_PLUGIN(Dashboard, "Rocket League Game Dashboard", "1.0", PLUGINTYPE_FREEPLAY)
 
+
+Dashboard::Dashboard() {
+    // Initialize AWS SDK
+    Aws::SDKOptions options;
+    Aws::InitAPI(options);
+}
 
 
 void Dashboard::log(std::string msg) {
@@ -38,27 +46,27 @@ void Dashboard::loadHooks() {
           std::bind(&Dashboard::getGameData, this));
      gameWrapper->HookEvent("Function ProjectX.GRI_X.EventGameStarted",
          std::bind(&Dashboard::getGameData, this));
-    gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartCountDown",
-      std::bind(&Dashboard::getGameData, this));
-    gameWrapper->HookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame",
-         std::bind(&Dashboard::getGameData, this));
+  //  gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartCountDown",
+  //    std::bind(&Dashboard::getGameData, this));
+  //  gameWrapper->HookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame",
+   //      std::bind(&Dashboard::getGameData, this));
     gameWrapper->HookEvent("Function GameEvent_Soccar_TA.Active.EndState",
          std::bind(&Dashboard::isGamePaused, this));
     gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartEvent",
           std::bind(&Dashboard::isGamePlaying, this));
-     gameWrapper->HookEvent("Function ProjectX.GRI_X.EventGameStarted",
-         std::bind(&Dashboard::isGamePlaying, this));
-    gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartCountDown",
-      std::bind(&Dashboard::isGamePlaying, this));
-    gameWrapper->HookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame",
-         std::bind(&Dashboard::isGamePlaying, this));
+   //  gameWrapper->HookEvent("Function ProjectX.GRI_X.EventGameStarted",
+   //      std::bind(&Dashboard::isGamePlaying, this));
+   // gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartCountDown",
+   //   std::bind(&Dashboard::isGamePlaying, this));
+   // gameWrapper->HookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame",
+   //      std::bind(&Dashboard::isGamePlaying, this));
 }
 
 
 void Dashboard::onLoad() {
 	this->log("Dashboard plugin started..");
     elapsedIntervals = 0;
-	dynamoDbOps();
+	AWSOps();
 	this->loadHooks();
 	
 }
@@ -66,7 +74,7 @@ void Dashboard::onLoad() {
 
 bool Dashboard::isGamePaused() {
     this->log("Game play paused..");
-    gamePaused = true; 
+    gamePaused = false; 
     return gamePaused;
 }
 
@@ -78,37 +86,76 @@ bool Dashboard::isGamePlaying() {
 }
 
 
-void Dashboard::dynamoDbOps() {
-	{   
-		Aws::SDKOptions options;
-        InitAPI(options);
-        
-		{
-		
-		  dynamoClient = std::make_shared<Aws::DynamoDB::DynamoDBClient>();
-		
-		  Aws::DynamoDB::Model::ListTablesRequest req;
-		  auto outcome = dynamoClient->ListTables(req);
+bool Dashboard::saveGameID(const std::string& gameID) {
 
-		  if (outcome.IsSuccess()) {
-		    	this->log("Your DynamoDB tables:");
+    Aws::S3::S3Client s3_client;
+    std::string bucketName = "rocket-league-lookup";
+    std::string objectKey = gameID;  // Assuming Game_ID itself can be used as the object key
 
-		    	Aws::Vector<Aws::String> table_list = outcome.GetResult().GetTableNames();
+    Aws::S3::Model::PutObjectRequest put_object_request;
+    put_object_request.WithBucket(bucketName).WithKey(objectKey);
 
-			    for (auto const& table_name : table_list) {
-				   this->log(table_name);
-			    }
-		  }
-		   else {
-			  this->log("ListTables error: " + outcome.GetError().GetExceptionName() + " - " + outcome.GetError().GetMessage());
-		   }
-	  }
-	  
-	  dynamoClient = std::make_shared<Aws::DynamoDB::DynamoDBClient>();
-	  
-	}
+    // Set up the request body, assuming you want to upload the gameID string
+    std::shared_ptr<Aws::IOStream> input_data = Aws::MakeShared<Aws::StringStream>("PutObjectInputStream");
+    *input_data << gameID;
+    put_object_request.SetBody(input_data);
+
+    auto put_object_outcome = s3_client.PutObject(put_object_request);
+
+    if (put_object_outcome.IsSuccess()) {
+        this->log("Successfully uploaded Game_ID " + gameID);
+        return true;
+    } else {
+        this->log("Failed to upload Game_ID " + gameID + ": " + put_object_outcome.GetError().GetMessage());
+        return false;
+    }
     
 }
+
+
+void Dashboard::AWSOps() {
+    // DynamoDB Operations
+    {
+        dynamoClient = std::make_shared<Aws::DynamoDB::DynamoDBClient>();
+        Aws::DynamoDB::Model::ListTablesRequest req;
+        auto outcome = dynamoClient->ListTables(req);
+
+        if (outcome.IsSuccess()) {
+            this->log("Your DynamoDB tables:");
+
+            Aws::Vector<Aws::String> table_list = outcome.GetResult().GetTableNames();
+
+            for (auto const& table_name : table_list) {
+                this->log(table_name);
+            }
+        }
+        else {
+            this->log("ListTables error: " + outcome.GetError().GetExceptionName() + " - " + outcome.GetError().GetMessage());
+        }
+    }
+
+    // S3 Operations
+    {   
+        using namespace Aws;
+        S3::S3Client client;
+        auto outcome = client.ListBuckets();
+
+        if (outcome.IsSuccess()) {
+            this->log("Your S3 buckets:");
+
+            Aws::Vector<Aws::S3::Model::Bucket> bucket_list = outcome.GetResult().GetBuckets();
+
+            for (auto const& bucket : bucket_list) {
+                this->log(bucket.GetName().c_str());
+            }
+        }
+        else {
+            this->log("ListBuckets error: " + outcome.GetError().GetExceptionName() + " - " + outcome.GetError().GetMessage());
+        }
+    }
+
+}
+
 
 void Dashboard::uploadToDynamoDB(
 const std::string& gameID, const std::string& timeRemainingString, 
@@ -157,7 +204,6 @@ const std::string& team1Player1FlipReset, const std::string& team1Player2FlipRes
 }
 
 
-
 void Dashboard::getGameData() {
 
     // Print output to console
@@ -188,6 +234,11 @@ void Dashboard::getGameData() {
         this->log("Game server found..\n");
 
         std::string gameID = server.GetMatchGUID();
+        if (!isNewGameFlag) {
+            saveGameID(gameID);
+            isNewGameFlag = true; // Set the flag to true
+        }
+
         const int timeRemaining = server.GetbOverTime() ? -server.GetSecondsRemaining() : server.GetSecondsRemaining();
         std::string timeRemainingString = std::to_string(timeRemaining); // Convert Time to string
 
@@ -303,22 +354,29 @@ void Dashboard::getGameData() {
         elapsedIntervals++;
 
         if (elapsedIntervals < 700) {
-            // Schedule this method to run again after 0.5 seconds
+            // Schedule this method to run again after 0.75 seconds
             gameWrapper->SetTimeout([this](GameWrapper* gw) {
                 getGameData();
-            }, 0.5f);
+            }, 0.75f);
         }
         
     } // End of if(isInOnlineGame)
 } // End of function
 
 
-
 void Dashboard::onUnload() {
     gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartEvent");
     gameWrapper->UnhookEvent("Function ProjectX.GRI_X.EventGameStarted");
-    gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartCountDown");
-    gameWrapper->UnhookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame");
+    //gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartCountDown");
+    //gameWrapper->UnhookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame");
     gameWrapper->UnhookEvent("Function GameEvent_Soccar_TA.Active.EndState");
 	this->log("Dashboard plugin unloaded..");
 }
+
+
+Dashboard::~Dashboard() {
+    // Shut down the AWS SDK
+    Aws::SDKOptions options;
+    Aws::ShutdownAPI(options);
+}
+

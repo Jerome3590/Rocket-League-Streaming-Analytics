@@ -29,7 +29,7 @@ link_directories("${BAKKESMOD_SDK_PATH}/lib")
 
 #### AWS VCPKG Libraries (vcpkg.json) ####
 set(TIFF_LIBRARIES ${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib/tiff.lib)
-find_package(AWSSDK CONFIG COMPONENTS core dynamodb REQUIRED)
+find_package(AWSSDK CONFIG COMPONENTS core dynamodb s3 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(PNG REQUIRED)
 find_package(protobuf REQUIRED)
