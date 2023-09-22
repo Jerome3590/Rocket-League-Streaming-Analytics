@@ -6,6 +6,7 @@
 #include <aws/core/auth/AWSCredentialsProvider.h> 
 #include <memory> // For std::shared_ptr// If used in the method declarations
 #include <string>
+#include <map>
 
 // Forward declarations
 class ServerWrapper;
@@ -35,9 +36,14 @@ private:
     std::shared_ptr<Aws::DynamoDB::DynamoDBClient> dynamoClient;
     void log(std::string msg);
     void AWSOps();
+    std::map<std::string, std::map<std::string, double>> dataMap;
+	std::pair<std::string, double> tableCalcs( 
+        const std::string& timeRemainingString, 
+		const std::string& team0Score, const std::string& team1Score);
     void uploadToDynamoDB(const std::string& gameID, const std::string& timeRemainingString, 
         const std::string& team0Name, const std::string& team1Name,
         const std::string& team0Score, const std::string& team1Score,
+		const std::string& Predicted_Winner, const std::string& winProbString,
         const std::string& team0PlayerName1, const std::string& team0PlayerName2, 
         const std::string& team1PlayerName1, const std::string& team1PlayerName2, 
         const std::string& team0Player1FlipReset, const std::string& team0Player2FlipReset,
