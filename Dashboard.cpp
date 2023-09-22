@@ -1730,22 +1730,22 @@ const std::string& team1Player1FlipReset, const std::string& team1Player2FlipRes
 
     // Create an item with string and number attributes
     Aws::Map<Aws::String, AttributeValue> item;
-    item["Game_ID"] = AttributeValue(gameID);
-    item["Time_Remaining"] = AttributeValue(timeRemainingString); 
-    item["Team0_Name"] = AttributeValue(team0Name);
-    item["Team1_Name"] = AttributeValue(team1Name);
-    item["Team0_Score"] = AttributeValue(team0Score);
-    item["Team1_Score"] = AttributeValue(team1Score);
-	item["Predicted_Winner"] = AttributeValue(Predicted_Winner);
-	item["Win_Probability"] = AttributeValue(WinProbString);
-    item["team0_PlayerName1"] = AttributeValue(team0PlayerName1);
-    item["team0_PlayerName2"] = AttributeValue(team0PlayerName2);
-    item["team1_PlayerName1"] = AttributeValue(team1PlayerName1);
-    item["team1_PlayerName2"] = AttributeValue(team1PlayerName2);
-    item["team0_Player1_Flip_Reset"] = AttributeValue(team0Player1FlipReset);
-    item["team0_Player2_Flip_Reset"] = AttributeValue(team0Player2FlipReset);
-    item["team1_Player1_Flip_Reset"] = AttributeValue(team1Player1FlipReset);
-    item["team1_Player2_Flip_Reset"] = AttributeValue(team1Player2FlipReset);
+    item["Game_ID"] = AttributeValue().SetS(gameID);
+    item["Time_Remaining"] = AttributeValue().SetN(timeRemainingString); 
+    item["Team0_Name"] = AttributeValue().SetS(team0Name);
+    item["Team1_Name"] = AttributeValue().SetS(team1Name);
+    item["Team0_Score"] = AttributeValue().SetN(team0Score);
+    item["Team1_Score"] = AttributeValue().SetN(team1Score);
+	item["Predicted_Winner"] = AttributeValue().SetS(Predicted_Winner);
+	item["Win_Probability"] = AttributeValue().SetN(WinProbString);
+    item["team0_PlayerName1"] = AttributeValue().SetS(team0PlayerName1);
+    item["team0_PlayerName2"] = AttributeValue().SetS(team0PlayerName2);
+    item["team1_PlayerName1"] = AttributeValue().SetS(team1PlayerName1);
+    item["team1_PlayerName2"] = AttributeValue().SetS(team1PlayerName2);
+    item["team0_Player1_Flip_Reset"] = AttributeValue().SetS(team0Player1FlipReset);
+    item["team0_Player2_Flip_Reset"] = AttributeValue().SetS(team0Player2FlipReset);
+    item["team1_Player1_Flip_Reset"] = AttributeValue().SetS(team1Player1FlipReset);
+    item["team1_Player2_Flip_Reset"] = AttributeValue().SetS(team1Player2FlipReset);
 
 
     // Set the item in the put request
