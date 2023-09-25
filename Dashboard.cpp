@@ -1726,7 +1726,7 @@ const std::string& team1Player1FlipReset, const std::string& team1Player2FlipRes
     PutItemRequest putItemRequest;
 
     // Set table name
-    putItemRequest.SetTableName("rocket_league_events");
+    putItemRequest.SetTableName("events_rocket_league");
 
     // Create an item with string and number attributes
     Aws::Map<Aws::String, AttributeValue> item;
