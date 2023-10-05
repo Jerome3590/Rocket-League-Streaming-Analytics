@@ -55,6 +55,10 @@ private:
         double team0Player2CarLocationX, double team0Player2CarLocationY, double team0Player2CarLocationZ,
         double team1Player1CarLocationX, double team1Player1CarLocationY, double team1Player1CarLocationZ,
         double team1Player2CarLocationX, double team1Player2CarLocationY, double team1Player2CarLocationZ,
+        double team0Player1CarRotationX, double team0Player1CarRotationY, double team0Player1CarRotationZ,  
+        double team0Player2CarRotationX, double team0Player2CarRotationY, double team0Player2CarRotationZ,
+        double team1Player1CarRotationX, double team1Player1CarRotationY, double team1Player1CarRotationZ,
+        double team1Player2CarRotationX, double team1Player2CarRotationY, double team1Player2CarRotationZ,
         const std::string& team0Player1FlipReset, const std::string& team0Player2FlipReset,
         const std::string& team1Player1FlipReset, const std::string& team1Player2FlipReset);
     void loadHooks();
