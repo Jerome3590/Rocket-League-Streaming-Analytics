@@ -1925,7 +1925,7 @@ void Dashboard::getGameData() {
         // Increment the elapsed intervals
         elapsedIntervals++;
 
-        if (elapsedIntervals < 1000) {
+        if (elapsedIntervals < 10000) {
             // Schedule this method to run again after 0.75 seconds
             gameWrapper->SetTimeout([this](GameWrapper* gw) {
                 getGameData();
