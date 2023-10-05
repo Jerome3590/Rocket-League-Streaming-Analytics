@@ -1,3 +1,4 @@
-COPY "build\Release\Dashboard.dll" "J:\My Drive\Action\Rocket League API\Release\"
-COPY "build\Release\Dashboard.dll" "C:\Users\jerom\AppData\Roaming\bakkesmod\bakkesmod\plugins\"
+COPY "build\Release\Dashboard.dll" "C:/Users/trist/Desktop/BakkesMod_Output/"
+COPY "build\Release\Dashboard.dll" "C:/Users/trist/AppData/Roaming/bakkesmod/bakkesmod/plugins/"
+
 

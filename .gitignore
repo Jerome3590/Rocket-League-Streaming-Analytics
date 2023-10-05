@@ -11,3 +11,6 @@ build/*
 !vcpkg_installed/x64-windows-static/.gitkeep
 !BakkesModSDK/.gitkeep
 !build/.gitkeep
+build.bat
+copyDLL.bat
+CMakeLists.txt
