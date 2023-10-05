@@ -4,6 +4,7 @@
 #include <bakkesmod/wrappers/GameEvent/ServerWrapper.h>
 #include <bakkesmod/wrappers/GameEvent/GameEventWrapper.h>
 #include <bakkesmod/wrappers/GameObject/TeamWrapper.h>
+#include <bakkesmod/wrappers/GameObject/CarWrapper.h>
 #include <bakkesmod/wrappers/GameObject/TeamInfoWrapper.h>
 #include <bakkesmod/wrappers/GameObject/PriWrapper.h>
 #include <bakkesmod/wrappers/GameEvent/TeamGameEventWrapper.h>
@@ -1733,6 +1734,43 @@ std::string Dashboard::getCurrentTime() {
     return timeStream.str();
 }
 
+Vector Dashboard::Rotate(Vector aVec, double roll, double yaw, double pitch)
+{
+	float sx = sin(roll);
+	float cx = cos(roll);
+	float sy = sin(yaw);
+	float cy = cos(yaw);
+	float sz = sin(pitch);
+	float cz = cos(pitch);
+
+	aVec = Vector(aVec.X, aVec.Y * cx - aVec.Z * sx, aVec.Y * sx + aVec.Z * cx);  //2  roll?
+	aVec = Vector(aVec.X * cz - aVec.Y * sz, aVec.X * sz + aVec.Y * cz, aVec.Z); //1   pitch?
+	aVec = Vector(aVec.X * cy + aVec.Z * sy, aVec.Y, -aVec.X * sy + aVec.Z * cy);  //3  yaw?
+
+	// ugly fix to change coordinates to Unreal's axes
+	float tmp = aVec.Z;
+	aVec.Z = aVec.Y;
+	aVec.Y = tmp;
+	return aVec;
+}
+
+
+void Dashboard::getCarLocationAndRotation(CarWrapper car) {
+    // Get the car's position and rotation
+    Vector v = car.GetLocation();
+    Rotator r = car.GetRotation();
+
+    double dPitch = (double)r.Pitch / 32768.0 * 3.14159;
+    double dYaw = (double)r.Yaw / 32768.0 * 3.14159;
+    double dRoll = (double)r.Roll / 32768.0 * 3.14159;
+
+    Vector vecCarRot;
+    vecCarRot = Rotate(v, dRoll, -dYaw, dPitch);
+    Quat rotationQuat = RotatorToQuat(r);
+    Vector rotatedPosition = RotateVectorWithQuat(Vector(vecCarRot), (rotationQuat));
+
+}
+    
 
 
 void Dashboard::uploadToDynamoDB(
@@ -1742,12 +1780,15 @@ const std::string& team0Score, const std::string& team1Score,
 const std::string& Predicted_Winner, const std::string& WinProbString,
 const std::string& team0PlayerName1, const std::string& team0PlayerName2, 
 const std::string& team1PlayerName1, const std::string& team1PlayerName2,
+double team0Player1CarLocationX, double team0Player1CarLocationY, double team0Player1CarLocationZ,
+double team0Player2CarLocationX, double team0Player2CarLocationY, double team0Player2CarLocationZ,
+double team1Player1CarLocationX, double team1Player1CarLocationY, double team1Player1CarLocationZ,
+double team1Player2CarLocationX, double team1Player2CarLocationY, double team1Player2CarLocationZ,
 const std::string& team0Player1FlipReset, const std::string& team0Player2FlipReset, 
 const std::string& team1Player1FlipReset, const std::string& team1Player2FlipReset) {
     using namespace Aws::DynamoDB::Model;
 
     PutItemRequest putItemRequest;
-
     // Set table name
     putItemRequest.SetTableName("events_rocket_league");
 
@@ -1765,6 +1806,18 @@ const std::string& team1Player1FlipReset, const std::string& team1Player2FlipRes
     item["team0_PlayerName2"] = AttributeValue().SetS(team0PlayerName2);
     item["team1_PlayerName1"] = AttributeValue().SetS(team1PlayerName1);
     item["team1_PlayerName2"] = AttributeValue().SetS(team1PlayerName2);
+    item["team0_Player1_Car_Location_X"] = AttributeValue().SetN(std::to_string(team0Player1CarLocationX));
+    item["team0_Player1_Car_Location_Y"] = AttributeValue().SetN(std::to_string(team0Player1CarLocationY));
+    item["team0_Player1_Car_Location_Z"] = AttributeValue().SetN(std::to_string(team0Player1CarLocationZ));
+    item["team0_Player2_Car_Location_X"] = AttributeValue().SetN(std::to_string(team0Player2CarLocationX));
+    item["team0_Player2_Car_Location_Y"] = AttributeValue().SetN(std::to_string(team0Player2CarLocationY));
+    item["team0_Player2_Car_Location_Z"] = AttributeValue().SetN(std::to_string(team0Player2CarLocationZ));
+    item["team1_Player1_Car_Location_X"] = AttributeValue().SetN(std::to_string(team1Player1CarLocationX));
+    item["team1_Player1_Car_Location_Y"] = AttributeValue().SetN(std::to_string(team1Player1CarLocationY));
+    item["team1_Player1_Car_Location_Z"] = AttributeValue().SetN(std::to_string(team1Player1CarLocationZ));
+    item["team1_Player2_Car_Location_X"] = AttributeValue().SetN(std::to_string(team1Player2CarLocationX));
+    item["team1_Player2_Car_Location_Y"] = AttributeValue().SetN(std::to_string(team1Player2CarLocationY));
+    item["team1_Player2_Car_Location_Z"] = AttributeValue().SetN(std::to_string(team1Player2CarLocationZ));
     item["team0_Player1_Flip_Reset"] = AttributeValue().SetS(team0Player1FlipReset);
     item["team0_Player2_Flip_Reset"] = AttributeValue().SetS(team0Player2FlipReset);
     item["team1_Player1_Flip_Reset"] = AttributeValue().SetS(team1Player1FlipReset);
@@ -1860,16 +1913,35 @@ void Dashboard::getGameData() {
         std::string team0PlayerName2 = "";
         std::string team1PlayerName1 = "";
         std::string team1PlayerName2 = "";
+
+        double team0Player1CarLocationX = 0.0;
+        double team0Player1CarLocationY = 0.0;
+        double team0Player1CarLocationZ = 0.0;
+
+        double team0Player2CarLocationX = 0.0;
+        double team0Player2CarLocationY = 0.0;
+        double team0Player2CarLocationZ = 0.0;
+
+        double team1Player1CarLocationX = 0.0;
+        double team1Player1CarLocationY = 0.0;
+        double team1Player1CarLocationZ = 0.0;
+
+        double team1Player2CarLocationX = 0.0;
+        double team1Player2CarLocationY = 0.0;
+        double team1Player2CarLocationZ = 0.0;
+
         std::string team0Player1FlipReset = "";
         std::string team0Player2FlipReset = "";
         std::string team1Player1FlipReset = "";
         std::string team1Player2FlipReset = "";
+
         int team0PlayerCount = 0;
         int team1PlayerCount = 0;
 
 
         for (int i = 0; i < pris.Count(); i++) {
             PriWrapper player = pris.Get(i);
+     
             if (player.IsNull()) {
                 continue;
             }
@@ -1905,18 +1977,30 @@ void Dashboard::getGameData() {
             if (playerTeam == 0 && team0PlayerCount < 2) {
                 if (team0PlayerCount == 0) {
                     team0PlayerName1 = playerName;
+                    team0Player1CarLocationX = playerCar.GetLocation().X;
+                    team0Player1CarLocationY = playerCar.GetLocation().Y;
+                    team0Player1CarLocationZ = playerCar.GetLocation().Z;
                     team0Player1FlipReset = flip_string;
                 } else {
                     team0PlayerName2 = playerName;
+                    team0Player2CarLocationX = playerCar.GetLocation().X;
+                    team0Player2CarLocationY = playerCar.GetLocation().Y;
+                    team0Player2CarLocationZ = playerCar.GetLocation().Z;
                     team0Player2FlipReset = flip_string;
                 }
                 team0PlayerCount++;
                 } else if (playerTeam == 1 && team1PlayerCount < 2) {
                 if (team1PlayerCount == 0) {
                     team1PlayerName1 = playerName;
+                    team1Player1CarLocationX = playerCar.GetLocation().X;
+                    team1Player1CarLocationY = playerCar.GetLocation().Y;
+                    team1Player1CarLocationZ = playerCar.GetLocation().Z;
                     team1Player1FlipReset = flip_string;
                 } else {
                     team1PlayerName2 = playerName;
+                    team1Player2CarLocationX = playerCar.GetLocation().X;
+                    team1Player2CarLocationY = playerCar.GetLocation().Y;
+                    team1Player2CarLocationZ = playerCar.GetLocation().Z;
                     team1Player2FlipReset = flip_string;
                 }
                 team1PlayerCount++;
@@ -1929,16 +2013,20 @@ void Dashboard::getGameData() {
         std::string Predicted_Winner = tableCalcsResult.first;
         double Win_Probability = tableCalcsResult.second;
         std::string winProbString = std::to_string(Win_Probability);
+        std::string team0Player1CarLocation = "X: " + std::to_string(team0Player1CarLocationX) + ", Y: " + std::to_string(team0Player1CarLocationY) + ", Z: " + std::to_string(team0Player1CarLocationZ);
+        std::string team0Player2CarLocation = "X: " + std::to_string(team0Player2CarLocationX) + ", Y: " + std::to_string(team0Player2CarLocationY) + ", Z: " + std::to_string(team0Player2CarLocationZ);
+        std::string team1Player1CarLocation = "X: " + std::to_string(team1Player1CarLocationX) + ", Y: " + std::to_string(team1Player1CarLocationY) + ", Z: " + std::to_string(team1Player2CarLocationZ);
+        std::string team1Player2CarLocation = "X: " + std::to_string(team1Player2CarLocationX) + ", Y: " + std::to_string(team1Player2CarLocationY) + ", Z: " + std::to_string(team1Player2CarLocationZ);
 
         // Print output to console
         this->log("Game ID: " + gameID + "\n");
 		this->log("Team: " + team0Name + " Score: " + team0Score + " | Team: " + team1Name + " Score: "  + team1Score + "\n");
         this->log("Time Remaining: " + timeRemainingString + " Predicted Winner: " + Predicted_Winner + " Win Probability: " + winProbString + "\n"); 
         this->log("Team: " + team0Name + " Score: " + team0Score + " | Team: " + team1Name + " Score: "  + team1Score + "\n");
-        this->log("Team1|Player1: " + team0PlayerName1 + " | FlipReset:" + team0Player1FlipReset + "\n" );
-        this->log("Team1|Player2: " + team0PlayerName2 + " | FlipReset:" + team0Player2FlipReset + "\n" ); 
-        this->log("Team2|Player1: " + team1PlayerName1 + " | FlipReset:" + team1Player1FlipReset + "\n" );
-        this->log("Team2|Player2: " + team1PlayerName2 + " | FlipReset:" + team1Player2FlipReset + "\n" );
+        this->log("Team1|Player1: " + team0PlayerName1 + " | FlipReset:" + team0Player1FlipReset + " | Location:" + team0Player1CarLocation + "\n" );
+        this->log("Team1|Player2: " + team0PlayerName2 + " | FlipReset:" + team0Player2FlipReset + " | Location:" + team0Player2CarLocation + "\n" ); 
+        this->log("Team2|Player1: " + team1PlayerName1 + " | FlipReset:" + team1Player1FlipReset + " | Location:" + team1Player1CarLocation + "\n" ); 
+        this->log("Team2|Player2: " + team1PlayerName2 + " | FlipReset:" + team1Player2FlipReset + " | Location:" + team1Player2CarLocation + "\n" );
         
         // Upload to DynamoDB
         uploadToDynamoDB(gameID, timeRemainingString, 
@@ -1947,6 +2035,10 @@ void Dashboard::getGameData() {
 						Predicted_Winner, winProbString,
                         team0PlayerName1, team0PlayerName2, 
                         team1PlayerName1, team1PlayerName2,
+                        team0Player1CarLocationX, team0Player1CarLocationY, team0Player1CarLocationZ,
+                        team0Player2CarLocationX, team0Player2CarLocationY, team0Player2CarLocationZ,
+                        team1Player1CarLocationX, team1Player1CarLocationY, team1Player1CarLocationZ,
+                        team1Player2CarLocationX, team1Player2CarLocationY, team1Player2CarLocationZ,
                         team0Player1FlipReset, team0Player2FlipReset, 
                         team1Player1FlipReset, team1Player2FlipReset);
 
@@ -1968,7 +2060,6 @@ void Dashboard::onUnload() {
     gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartEvent");
     gameWrapper->UnhookEvent("Function ProjectX.GRI_X.EventGameStarted");
     gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartCountDown");
-    //gameWrapper->UnhookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame");
     gameWrapper->UnhookEvent("Function GameEvent_Soccar_TA.Active.EndState");
 	this->log("Dashboard plugin unloaded..");
 }

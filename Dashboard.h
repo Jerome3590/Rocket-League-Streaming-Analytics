@@ -31,6 +31,8 @@ public:
     bool saveGameID(const std::string& gameID);
     bool isNewGameFlag = false;
     bool gamePaused = false;
+    void getCarLocationAndRotation(CarWrapper car);
+    Vector Rotate(Vector aVec, double roll, double yaw, double pitch);
     void getGameData();
     static void logAndCall(std::function<void()> func, const std::string& message); 
     ~Dashboard(); 
@@ -49,6 +51,10 @@ private:
 		const std::string& Predicted_Winner, const std::string& winProbString,
         const std::string& team0PlayerName1, const std::string& team0PlayerName2, 
         const std::string& team1PlayerName1, const std::string& team1PlayerName2, 
+        double team0Player1CarLocationX, double team0Player1CarLocationY, double team0Player1CarLocationZ,
+        double team0Player2CarLocationX, double team0Player2CarLocationY, double team0Player2CarLocationZ,
+        double team1Player1CarLocationX, double team1Player1CarLocationY, double team1Player1CarLocationZ,
+        double team1Player2CarLocationX, double team1Player2CarLocationY, double team1Player2CarLocationZ,
         const std::string& team0Player1FlipReset, const std::string& team0Player2FlipReset,
         const std::string& team1Player1FlipReset, const std::string& team1Player2FlipReset);
     void loadHooks();
