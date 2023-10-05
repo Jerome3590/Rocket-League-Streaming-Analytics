@@ -7,6 +7,8 @@
 #include <memory> // For std::shared_ptr// If used in the method declarations
 #include <string>
 #include <map>
+#include <chrono>
+#include <ctime>
 
 // Forward declarations
 class ServerWrapper;
@@ -25,6 +27,7 @@ public:
     virtual void onUnload();
     bool isGamePaused();
     bool isGamePlaying();
+    std::string getCurrentTime();
     bool saveGameID(const std::string& gameID);
     bool isNewGameFlag = false;
     bool gamePaused = false;

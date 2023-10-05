@@ -23,6 +23,8 @@
 #include <functional>
 #include <thread>
 #include <chrono>
+#include <iomanip>
+#include <ctime>
 
 
 BAKKESMOD_PLUGIN(Dashboard, "Rocket League Game Dashboard", "1.0", PLUGINTYPE_FREEPLAY)
@@ -1711,6 +1713,27 @@ std::pair<std::string, double> Dashboard::tableCalcs(
 }
 
 
+std::string Dashboard::getCurrentTime() {
+    // Get current time with high resolution
+    auto now = std::chrono::system_clock::now();
+    auto now_time_t = std::chrono::system_clock::to_time_t(now);
+    auto now_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+    // Convert to tm structure
+    std::tm* localTime = std::localtime(&now_time_t);
+
+    // Create a stringstream to format time
+    std::stringstream timeStream;
+    timeStream << std::setw(2) << std::setfill('0') << localTime->tm_hour
+               << std::setw(2) << std::setfill('0') << localTime->tm_min
+               << std::setw(2) << std::setfill('0') << localTime->tm_sec
+               << std::setw(3) << std::setfill('0') << now_milliseconds.count();
+
+    // Return the formatted time as a string
+    return timeStream.str();
+}
+
+
 
 void Dashboard::uploadToDynamoDB(
 const std::string& gameID, const std::string& timeRemainingString, 
@@ -1798,7 +1821,12 @@ void Dashboard::getGameData() {
         }
 
         const int timeRemaining = server.GetbOverTime() ? -server.GetSecondsRemaining() : server.GetSecondsRemaining();
-        std::string timeRemainingString = std::to_string(timeRemaining); // Convert Time to string
+        // get current time as 24 hour string
+        std::string currentTime = getCurrentTime();
+        // Convert game time remaining  to string
+        std::string gameTimeString = std::to_string(timeRemaining); 
+        // Append current time with timeRemainingString to create a unique time_remaining_ sort key
+        std::string timeRemainingString = gameTimeString + "." + currentTime; 
 
         ServerWrapper gameState = gameWrapper->GetCurrentGameState();
         if(gameState.IsNull()) {
@@ -1897,7 +1925,7 @@ void Dashboard::getGameData() {
         }
 		
 		
-		std::pair<std::string, double> tableCalcsResult = tableCalcs(timeRemainingString, team0Score, team1Score);
+		std::pair<std::string, double> tableCalcsResult = tableCalcs(gameTimeString, team0Score, team1Score);
         std::string Predicted_Winner = tableCalcsResult.first;
         double Win_Probability = tableCalcsResult.second;
         std::string winProbString = std::to_string(Win_Probability);
@@ -1905,7 +1933,7 @@ void Dashboard::getGameData() {
         // Print output to console
         this->log("Game ID: " + gameID + "\n");
 		this->log("Team: " + team0Name + " Score: " + team0Score + " | Team: " + team1Name + " Score: "  + team1Score + "\n");
-        this->log("Time Remaining: " + timeRemainingString + "Predicted Winner: " + Predicted_Winner + "Win Probability: " + winProbString + "\n"); 
+        this->log("Time Remaining: " + timeRemainingString + " Predicted Winner: " + Predicted_Winner + " Win Probability: " + winProbString + "\n"); 
         this->log("Team: " + team0Name + " Score: " + team0Score + " | Team: " + team1Name + " Score: "  + team1Score + "\n");
         this->log("Team1|Player1: " + team0PlayerName1 + " | FlipReset:" + team0Player1FlipReset + "\n" );
         this->log("Team1|Player2: " + team0PlayerName2 + " | FlipReset:" + team0Player2FlipReset + "\n" ); 
