@@ -1961,18 +1961,18 @@ void Dashboard::getGameData() {
         
             // Log that a game server was found
             this->log("Cars found..\n");
-
-            CarWrapper hasFlip = playerCar.HasFlip();
-               if (hasFlip.IsNull())
-               continue;
-
             std::string flip_string;
-	        if (playerCar.HasFlip()) {
-		            flip_string = "FLIP";
-            }
-	        else {
-		       flip_string = "NO FLIP";
-	        }
+
+            int getContacts = playerCar.GetNumWheelContacts();
+               if (playerCar.GetNumWheelContacts() != 4){
+               continue;
+               flip_string = "Not on ground";
+               }
+               //else if getContacts is equal to 4, then all wheels are touching the ground
+                else{
+                flip_string = "FLIP (on ground)";
+               }
+
 
             if (playerTeam == 0 && team0PlayerCount < 2) {
                 if (team0PlayerCount == 0) {
