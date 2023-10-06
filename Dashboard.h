@@ -4,7 +4,7 @@
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 #include <aws/core/Aws.h>
 #include <aws/core/auth/AWSCredentialsProvider.h> 
-#include <memory> // For std::shared_ptr// If used in the method declarations
+#include <memory> 
 #include <string>
 #include <map>
 #include <chrono>
@@ -42,13 +42,13 @@ private:
     void log(std::string msg);
     void AWSOps();
     std::map<std::string, std::map<std::string, double>> dataMap;
-	std::pair<std::string, double> tableCalcs( 
+    std::pair<std::string, double> tableCalcs( 
         const std::string& timeRemainingString, 
-		const std::string& team0Score, const std::string& team1Score);
+	const std::string& team0Score, const std::string& team1Score);
     void uploadToDynamoDB(const std::string& gameID, const std::string& timeRemainingString, 
         const std::string& team0Name, const std::string& team1Name,
         const std::string& team0Score, const std::string& team1Score,
-		const std::string& Predicted_Winner, const std::string& winProbString,
+	const std::string& Predicted_Winner, const std::string& winProbString,
         const std::string& team0PlayerName1, const std::string& team0PlayerName2, 
         const std::string& team1PlayerName1, const std::string& team1PlayerName2, 
         double team0Player1CarLocationX, double team0Player1CarLocationY, double team0Player1CarLocationZ,
