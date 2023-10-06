@@ -1766,8 +1766,8 @@ const std::string& team1Player1FlipReset, const std::string& team1Player2FlipRes
     item["Team1_Name"] = AttributeValue().SetS(team1Name);
     item["Team0_Score"] = AttributeValue().SetN(team0Score);
     item["Team1_Score"] = AttributeValue().SetN(team1Score);
-	item["Predicted_Winner"] = AttributeValue().SetS(Predicted_Winner);
-	item["Win_Probability"] = AttributeValue().SetN(WinProbString);
+    item["Predicted_Winner"] = AttributeValue().SetS(Predicted_Winner);
+    item["Win_Probability"] = AttributeValue().SetN(WinProbString);
     item["team0_PlayerName1"] = AttributeValue().SetS(team0PlayerName1);
     item["team0_PlayerName2"] = AttributeValue().SetS(team0PlayerName2);
     item["team1_PlayerName1"] = AttributeValue().SetS(team1PlayerName1);
