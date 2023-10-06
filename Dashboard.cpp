@@ -1557,10 +1557,6 @@ void Dashboard::loadHooks() {
           std::bind(&Dashboard::getGameData, this));
      gameWrapper->HookEvent("Function ProjectX.GRI_X.EventGameStarted",
          std::bind(&Dashboard::getGameData, this));
-  //  gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartCountDown",
-  //    std::bind(&Dashboard::getGameData, this));
-  //  gameWrapper->HookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame",
-   //      std::bind(&Dashboard::getGameData, this));
     gameWrapper->HookEvent("Function GameEvent_Soccar_TA.Active.EndState",
          std::bind(&Dashboard::isGamePaused, this));
     gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartEvent",
@@ -1569,8 +1565,6 @@ void Dashboard::loadHooks() {
          std::bind(&Dashboard::isGamePlaying, this));
     gameWrapper->HookEvent("Function TAGame.GameEvent_TA.StartCountDown",
       std::bind(&Dashboard::isGamePlaying, this));
-   // gameWrapper->HookEvent("Function ProjectX.OnlinePlayer_X.OnNewGame",
-   //      std::bind(&Dashboard::isGamePlaying, this));
 }
 
 
@@ -1601,7 +1595,7 @@ bool Dashboard::saveGameID(const std::string& gameID) {
 
     Aws::S3::S3Client s3_client;
     std::string bucketName = "rocket-league-lookup";
-    std::string objectKey = gameID;  // Assuming Game_ID itself can be used as the object key
+    std::string objectKey = gameID;  
 
     Aws::S3::Model::PutObjectRequest put_object_request;
     put_object_request.WithBucket(bucketName).WithKey(objectKey);
@@ -1751,7 +1745,8 @@ double team0Player2CarRotationPitch, double team0Player2CarRotationYaw, double t
 double team1Player1CarRotationPitch, double team1Player1CarRotationYaw, double team1Player1CarRotationRoll,
 double team1Player2CarRotationPitch, double team1Player2CarRotationYaw, double team1Player2CarRotationRoll,
 const std::string& team0Player1FlipReset, const std::string& team0Player2FlipReset, 
-const std::string& team1Player1FlipReset, const std::string& team1Player2FlipReset) {
+const std::string& team1Player1FlipReset, const std::string& team1Player2FlipReset)
+{
     using namespace Aws::DynamoDB::Model;
 
     PutItemRequest putItemRequest;
@@ -2015,7 +2010,7 @@ void Dashboard::getGameData() {
         }
 		
 		
-		std::pair<std::string, double> tableCalcsResult = tableCalcs(gameTimeString, team0Score, team1Score);
+	std::pair<std::string, double> tableCalcsResult = tableCalcs(gameTimeString, team0Score, team1Score);
         std::string Predicted_Winner = tableCalcsResult.first;
         double Win_Probability = tableCalcsResult.second;
         std::string winProbString = std::to_string(Win_Probability);
@@ -2031,7 +2026,7 @@ void Dashboard::getGameData() {
 
         // Print output to console
         this->log("Game ID: " + gameID + "\n");
-		this->log("Team: " + team0Name + " Score: " + team0Score + " | Team: " + team1Name + " Score: "  + team1Score + "\n");
+	this->log("Team: " + team0Name + " Score: " + team0Score + " | Team: " + team1Name + " Score: "  + team1Score + "\n");
         this->log("Time Remaining: " + timeRemainingString + " Predicted Winner: " + Predicted_Winner + " Win Probability: " + winProbString + "\n"); 
         this->log("Team: " + team0Name + " Score: " + team0Score + " | Team: " + team1Name + " Score: "  + team1Score + "\n");
         this->log("Team1|Player1: " + team0PlayerName1 + " | FlipReset:" + team0Player1FlipReset + " | Location:" + team0Player1CarLocation + "|" + team0Player1carRotationStr + "\n" );
@@ -2043,7 +2038,7 @@ void Dashboard::getGameData() {
         uploadToDynamoDB(gameID, timeRemainingString, 
                         team0Name, team1Name,
                         team0Score, team1Score, 
-						Predicted_Winner, winProbString,
+			Predicted_Winner, winProbString,
                         team0PlayerName1, team0PlayerName2, 
                         team1PlayerName1, team1PlayerName2,
                         team0Player1CarLocationX, team0Player1CarLocationY, team0Player1CarLocationZ,
@@ -2076,7 +2071,7 @@ void Dashboard::onUnload() {
     gameWrapper->UnhookEvent("Function ProjectX.GRI_X.EventGameStarted");
     gameWrapper->UnhookEvent("Function TAGame.GameEvent_TA.StartCountDown");
     gameWrapper->UnhookEvent("Function GameEvent_Soccar_TA.Active.EndState");
-	this->log("Dashboard plugin unloaded..");
+    this->log("Dashboard plugin unloaded..");
 }
 
 
